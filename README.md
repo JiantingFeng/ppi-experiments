@@ -14,3 +14,12 @@ We denote the true parameter as $\beta$, and the first three elements of $\beta$
 
 ## Results
 ![alt text](results/image.png)
+
+## To-do
+
+### Meeting 1
+**June 20 / 2024**
+
+- [ ] Literature review (including the paper: https://arxiv.org/abs/2405.18379 and the reference here in);
+- [ ] deduction based on a identical cov;
+- [ ] and the results based on a general covariance matrix;
