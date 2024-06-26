@@ -13,13 +13,23 @@ Experiments for ppi and related methods
 We denote the true parameter as $\beta$, and the first three elements of $\beta$ is $0, 0.05, 0.10$
 
 ## Results
-![alt text](results/image.png)
+### Standard Normal Design
+![alt text](results/normal.png)
+
+### Standard Cauchy Design
+![](results/cauchy.png)
+
+### Uniform
+![](results/unif.png)
+
+
+The results show that the type I error control and power is related to the covariate $X$, which need further consideration. The deduction last time is totally wrong.
 
 ## To-do
 
 ### Meeting 1
 **June 20 / 2024**
 
-- [ ] Literature review (including the paper: https://arxiv.org/abs/2405.18379 and the reference here in);
-- [ ] deduction based on a identical cov;
-- [ ] and the results based on a general covariance matrix;
+- [x] Literature review (including the paper: https://arxiv.org/abs/2405.18379 and the reference here in);
+- [ ] deduction based on a identical cov; and the results based on a general covariance matrix;
+
