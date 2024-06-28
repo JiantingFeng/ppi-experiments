@@ -31,5 +31,10 @@ The results show that the type I error control and power is related to the covar
 **June 20 / 2024**
 
 - [x] Literature review (including the paper: https://arxiv.org/abs/2405.18379 and the reference here in);
-- [ ] deduction based on a identical cov; and the results based on a general covariance matrix;
+- [ ] deduction based on an identical cov; and the results based on a general covariance matrix;
 
+### Meeting 2
+**June 28 / 2024**
+**PPI + Prob Calibration**
+- [ ] when f is an unbiased estimator of P(Y=1|x): (i) provide prob as psudo-label; (ii) provide pred label as psudo-label; Method (1) and (1')
+- [ ] when f is an biased estimator of P(Y=1|x): compare five methods; different frameworks to debias;
