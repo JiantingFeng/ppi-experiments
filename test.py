@@ -57,7 +57,7 @@ def generate_data(n1: int, n2: int, m: int, p: int):
     y_ols = X_labeled_ols @ beta + np.random.randn(n1)
     y_rest = X_labeled_rest @ beta + np.random.randn(n2)
 
-    return X_labeled_ols, X_labeled_rest, X_unlabeled, y_ols, y_rest
+    return X_labeled_ols, X_labeled_rest, X_unlabeled, y_ols, y_rest, beta
 
 
 def generate_orthogonal_data(n, m, p):
@@ -119,9 +119,10 @@ def run_simulation(config):
         type_I_error_feat_0 = np.zeros(config.n_iter)
         power_feat_1 = np.zeros(config.n_iter)
         power_feat_2 = np.zeros(config.n_iter)
+        beta_diff = np.zeros(config.n_iter)
         for i in trange(config.n_iter):
-            X_labeled_ols, X_labeled_rest, X_unlabeled, y_ols, y_rest = generate_data(
-                n1, n2, m, p
+            X_labeled_ols, X_labeled_rest, X_unlabeled, y_ols, y_rest, beta = (
+                generate_data(n1, n2, m, p)
             )
             # X_labeled_ols, y_ols for fitting OLS model
             # X_labeled_rest, y_rest combined with X_unlabeled for hypothesis testing
@@ -138,6 +139,9 @@ def run_simulation(config):
             # Fit new model on combined data and perform hypothesis testing
             beta_ols_combined = fit_ols(X, y)
             p_values = hypothesis_testing(X, y, beta_ols_combined, alpha)
+
+            # Test whether the difference between beta_ols and beta is significant
+            beta_diff[i] = beta_ols[0] - beta[0]
 
             # Check if null hypothesis is rejected for first 3 feature
             # First feature is irrelevant, second and third are correlated with target
@@ -157,6 +161,14 @@ def run_simulation(config):
             "power_feat_1": power_feat_1,
             "power_feat_2": power_feat_2,
         }
+        # hist of beta_diff
+        plt.hist(beta_diff, bins=20)
+        plt.xlabel("||beta_ols - beta||")
+        plt.ylabel("Frequency")
+        plt.title(f"m = {m}")
+        plt.savefig(f"results/beta_diff_{m}.pdf")
+        plt.close()
+        break
 
     results.to_csv(os.path.join(config.savedir, "results.csv"))
     return results
@@ -199,9 +211,9 @@ def run_simulation_orth(config):
             y_unlabeled_pred = X_unlabeled @ beta_ols
 
             # Combine labeled and unlabeled data
-            X = np.vstack([X_labeled_rest, X_unlabeled]) / np.sqrt(2)
+            X = np.vstack([X_labeled_rest, X_unlabeled])
             # TODO: combination of orthogonal matrices is not orthogonal, we need to rescale both X and y simultaneously in order to keep the orthogonality of design matrix X
-            y = np.hstack([y_rest, y_unlabeled_pred]).T / np.sqrt(2)
+            y = np.hstack([y_rest, y_unlabeled_pred]).T
 
             # Fit new model on combined data and perform hypothesis testing
             beta_ols_combined = fit_ols(X, y)

@@ -38,3 +38,12 @@ The results show that the type I error control and power is related to the covar
 **PPI + Prob Calibration**
 - [ ] when f is an unbiased estimator of P(Y=1|x): (i) provide prob as psudo-label; (ii) provide pred label as psudo-label; Method (1) and (1')
 - [ ] when f is an biased estimator of P(Y=1|x): compare five methods; different frameworks to debias;
+#### Follow up Meeting 1
+
+- As shown in simulation results, the type I error control may related to the property of design matrix.
+- For orthogonal designs, the result seems wired, need to figure ot the reason 
+![](/results/orth.png)
+- The procedure to generate orthogonal design 
+    1. Generate 3 design matrices seperately
+    2. QR decomposition, i.e. $X = QR$, where $Q\in\mathbb{R}^{n\times p}$
+    3. Use Q as design matrix, $Q\top Q = I$    
