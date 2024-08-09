@@ -20,7 +20,7 @@ n_exp = 100
 residuals = np.zeros((n_exp, p))
 
 # Check the coverage of the confidence intervals
-coverage_count = 0
+coverage_count = np.zeros(p)
 
 for i in tqdm(range(n_exp)):
     X = np.random.randn(n, p)
@@ -67,12 +67,14 @@ for i in tqdm(range(n_exp)):
     residuals[i] = beta - beta_hat
 
     # Check if the true beta is within the confidence interval
-    if np.all(beta > ci[0]) and np.all(beta < ci[1]):
-        coverage_count += 1
+    for j in range(p):
+        if beta[j] >= ci[0][j] and beta[j] <= ci[1][j]:
+            coverage_count[j] += 1
 
 # Plotting the residuals
 plt.figure(figsize=(10, 5))
-sns.boxplot(data=residuals)
+# Violin plot of the residuals
+sns.violinplot(data=residuals)
 plt.xlabel("Features")
 plt.ylabel("Residuals")
 plt.title("Residuals of the estimated coefficients")
@@ -80,4 +82,13 @@ plt.savefig("residuals.png")
 
 # Calculate the coverage of the confidence intervals
 coverage = coverage_count / n_exp
-print(f"Coverage of the confidence intervals: {coverage:.2f}")
+
+# Plotting the coverage of the confidence intervals
+plt.figure(figsize=(10, 5))
+plt.bar(range(p), coverage)
+# Add a horizontal line at 0.90
+plt.axhline(0.90, color="red", linestyle="--")
+plt.xlabel("Features")
+plt.ylabel("Coverage")
+plt.title("Coverage of the confidence intervals")
+plt.savefig("coverage.png")
