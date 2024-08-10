@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import ppi_py
@@ -12,9 +11,9 @@ from sklearn.model_selection import train_test_split
 # Generating synthetic data for logistic regression, training, validation and testing
 
 np.random.seed(0)
-n = 1000
+n = 10000
 p = 10
-n_exp = 100
+n_exp = 1000
 
 # Hold all residuals
 residuals = np.zeros((n_exp, p))
@@ -78,7 +77,7 @@ sns.violinplot(data=residuals)
 plt.xlabel("Features")
 plt.ylabel("Residuals")
 plt.title("Residuals of the estimated coefficients")
-plt.savefig("residuals.png")
+plt.savefig("./results/residuals.png")
 
 # Calculate the coverage of the confidence intervals
 coverage = coverage_count / n_exp
@@ -91,4 +90,4 @@ plt.axhline(0.90, color="red", linestyle="--")
 plt.xlabel("Features")
 plt.ylabel("Coverage")
 plt.title("Coverage of the confidence intervals")
-plt.savefig("coverage.png")
+plt.savefig("./results/coverage.png")
