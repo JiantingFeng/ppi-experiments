@@ -5,6 +5,16 @@ import seaborn as sns
 from scipy.optimize import minimize
 from functools import partial
 import argparse
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    TimeRemainingColumn,
+)
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 
 
 def log1pexp(x):
@@ -196,55 +206,127 @@ def generate_data(n_samples, n_dims):
     return X, y
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='PPI Logistic Regression Experiment')
-    parser.add_argument('--n_samples', type=int, default=100000, help='Number of samples')
-    parser.add_argument('--n_dims', type=int, default=10, help='Number of dimensions')
-    parser.add_argument('--n_exps', type=int, default=100, help='Number of experiments')
-    parser.add_argument('--labeled_unlabeled_ratio', type=float, default=0.3, help='Ratio of labeled to unlabeled data')
-    parser.add_argument('--pseudo_label', type=bool, default=True, help='Whether to use pseudo-labels')
-    parser.add_argument('--temp', type=float, default=1.0, help='Temperature parameter')
-    parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="PPI Logistic Regression Experiment")
+    parser.add_argument(
+        "--n_samples", type=int, default=100000, help="Number of samples"
+    )
+    parser.add_argument("--n_dims", type=int, default=10, help="Number of dimensions")
+    parser.add_argument("--n_exps", type=int, default=100, help="Number of experiments")
+    parser.add_argument(
+        "--labeled_unlabeled_ratio",
+        type=float,
+        default=0.3,
+        help="Ratio of labeled to unlabeled data",
+    )
+    parser.add_argument(
+        "--pseudo_label", type=bool, default=True, help="Whether to use pseudo-labels"
+    )
+    parser.add_argument("--temp", type=float, default=1.0, help="Temperature parameter")
+    parser.add_argument(
+        "--seed", type=int, default=42, help="Random seed for reproducibility"
+    )
     args = parser.parse_args()
 
     np.random.seed(args.seed)
 
+    console = Console()
+
+    console.print(
+        Panel.fit(
+            "[bold green]Starting PPI Logistic Regression Experiment[/bold green]",
+            border_style="green",
+        )
+    )
+
+    param_table = Table(
+        title="Experiment Parameters", show_header=True, header_style="bold magenta"
+    )
+    param_table.add_column("Parameter", style="cyan", justify="right")
+    param_table.add_column("Value", style="yellow")
+    param_table.add_row("Number of samples", str(args.n_samples))
+    param_table.add_row("Number of dimensions", str(args.n_dims))
+    param_table.add_row("Number of experiments", str(args.n_exps))
+    param_table.add_row("Labeled/Unlabeled ratio", str(args.labeled_unlabeled_ratio))
+    param_table.add_row("Use pseudo-labels", str(args.pseudo_label))
+    param_table.add_row("Temperature", str(args.temp))
+    param_table.add_row("Random seed", str(args.seed))
+    console.print(param_table)
+
     lr_bias_list = []
     ppi_bias_list = []
 
-    for i in range(args.n_exps):
-        print(f"Experiment no. {i}")
-        beta_true = np.asarray([0] * (args.n_dims // 2) + [1] * (args.n_dims - args.n_dims // 2))
-        n_labeled = int(args.n_samples * args.labeled_unlabeled_ratio)
-        n_unlabeled = args.n_samples - int(args.n_samples * args.labeled_unlabeled_ratio)
-
-        X_train_labeled, y_train_labeled = generate_data(n_labeled, args.n_dims)
-        X_train_unlabeled, _ = generate_data(n_unlabeled, args.n_dims)
-        X_holdout, y_holdout = generate_data(args.n_samples * 10, args.n_dims)
-
-        beta_hat = optimize_logistic_regression(X_holdout, y_holdout, args.temp)
-        beta_ppi = optimize_ppi_logistic_regression(
-            X_train_labeled, y_train_labeled, X_train_unlabeled, args.temp
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        TimeRemainingColumn(),
+    ) as progress:
+        main_task = progress.add_task(
+            "[green]Running experiments...", total=args.n_exps
         )
 
-        lr_bias_list.append(beta_hat - beta_true)
-        ppi_bias_list.append(beta_ppi - beta_true)
+        for i in range(args.n_exps):
+            progress.update(
+                main_task,
+                advance=1,
+                description=f"[green]Running experiment {i+1}/{args.n_exps}...",
+            )
+
+            beta_true = np.asarray(
+                [0] * (args.n_dims // 2) + [1] * (args.n_dims - args.n_dims // 2)
+            )
+            n_labeled = int(args.n_samples * args.labeled_unlabeled_ratio)
+            n_unlabeled = args.n_samples - int(
+                args.n_samples * args.labeled_unlabeled_ratio
+            )
+
+            X_train_labeled, y_train_labeled = generate_data(n_labeled, args.n_dims)
+            X_train_unlabeled, _ = generate_data(n_unlabeled, args.n_dims)
+            X_holdout, y_holdout = generate_data(args.n_samples * 10, args.n_dims)
+
+            beta_hat = optimize_logistic_regression(X_holdout, y_holdout, args.temp)
+
+            beta_ppi = optimize_ppi_logistic_regression(
+                X_train_labeled, y_train_labeled, X_train_unlabeled, args.temp
+            )
+
+            lr_bias_list.append(beta_hat - beta_true)
+            ppi_bias_list.append(beta_ppi - beta_true)
+
+    console.print(
+        Panel.fit(
+            "[bold green]Experiments completed![/bold green]", border_style="green"
+        )
+    )
 
     lr_bias_array = np.array(lr_bias_list)
     ppi_bias_array = np.array(ppi_bias_list)
 
-    # Save as NPY file
+    console.print("[bold cyan]Saving results...[/bold cyan]")
     np.save("lr_bias_array.npy", lr_bias_array)
     np.save("ppi_bias_array.npy", ppi_bias_array)
 
+    console.print("[bold cyan]Generating plot...[/bold cyan]")
     # Combine data for boxplot
     data = np.concatenate([lr_bias_array, ppi_bias_array], axis=0)
-    labels = ["LR"] * lr_bias_array.shape[0] * args.n_dims + ["PPI"] * ppi_bias_array.shape[0] * args.n_dims
-    dimensions = np.tile(np.arange(1, args.n_dims + 1), lr_bias_array.shape[0] + ppi_bias_array.shape[0])
+    labels = ["LR"] * lr_bias_array.shape[0] * args.n_dims + [
+        "PPI"
+    ] * ppi_bias_array.shape[0] * args.n_dims
+    dimensions = np.tile(
+        np.arange(1, args.n_dims + 1), lr_bias_array.shape[0] + ppi_bias_array.shape[0]
+    )
 
     # Set up the plot
     plt.figure(figsize=(15, 8))
-    sns.boxplot(x=dimensions, y=data.flatten(), hue=labels, dodge=True, palette="Set2")
+    sns.boxplot(
+        x=dimensions,
+        y=data.flatten(),
+        hue=labels,
+        dodge=True,
+        palette={"LR": "blue", "PPI": "green"},
+    )
 
     # Set title and labels
     plt.title(
@@ -259,4 +341,33 @@ if __name__ == '__main__':
 
     # Show the plot
     plt.tight_layout()
-    plt.savefig("psedo_label.png", dpi=300)  # Save with higher resolution
+    plt.savefig("pseudo_label.png", dpi=300)  # Save with higher resolution
+
+    results_table = Table(
+        title="Experiment Results", show_header=True, header_style="bold magenta"
+    )
+    results_table.add_column("Metric", style="cyan", justify="right")
+    results_table.add_column("Logistic Regression", style="blue")
+    results_table.add_column("PPI Logistic Regression", style="green")
+    results_table.add_row(
+        "Mean Bias", f"{lr_bias_array.mean():.4f}", f"{ppi_bias_array.mean():.4f}"
+    )
+    results_table.add_row(
+        "Std Bias", f"{lr_bias_array.std():.4f}", f"{ppi_bias_array.std():.4f}"
+    )
+    results_table.add_row(
+        "Max Bias", f"{lr_bias_array.max():.4f}", f"{ppi_bias_array.max():.4f}"
+    )
+    results_table.add_row(
+        "Min Bias", f"{lr_bias_array.min():.4f}", f"{ppi_bias_array.min():.4f}"
+    )
+    console.print(results_table)
+
+    console.print(
+        Panel.fit(
+            "[bold green]Experiment completed successfully![/bold green]\n"
+            "[cyan]Results saved as 'lr_bias_array.npy' and 'ppi_bias_array.npy'[/cyan]\n"
+            "[cyan]Plot saved as 'pseudo_label.png'[/cyan]",
+            border_style="green",
+        )
+    )
