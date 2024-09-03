@@ -15,6 +15,7 @@ from rich.progress import (
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+import os
 
 
 def log1pexp(x):
@@ -238,6 +239,12 @@ if __name__ == "__main__":
         action="store_true",
         help="Save the figure as 'pseudo_label.png'",
     )
+    parser.add_argument(
+        "--result_file",
+        type=str,
+        default="result.csv",
+        help="Name of the CSV file to save results",
+    )
     args = parser.parse_args()
 
     np.random.seed(args.seed)
@@ -399,6 +406,41 @@ if __name__ == "__main__":
     # Calculate and report average variance across dimensions
     lr_avg_var = np.mean(np.var(lr_bias_array, axis=0))
     ppi_avg_var = np.mean(np.var(ppi_bias_array, axis=0))
+
+    # Create a dictionary with the results
+    result_dict = {
+        "n_samples": args.n_samples,
+        "n_dims": args.n_dims,
+        "n_exps": args.n_exps,
+        "labeled_unlabeled_ratio": args.labeled_unlabeled_ratio,
+        "pseudo_label": args.pseudo_label,
+        "temp": args.temp,
+        "lr_mean_bias": lr_bias_array.mean(),
+        "ppi_mean_bias": ppi_bias_array.mean(),
+        "lr_std_bias": lr_bias_array.std(),
+        "ppi_std_bias": ppi_bias_array.std(),
+        "lr_max_bias": lr_bias_array.max(),
+        "ppi_max_bias": ppi_bias_array.max(),
+        "lr_min_bias": lr_bias_array.min(),
+        "ppi_min_bias": ppi_bias_array.min(),
+        "lr_variance": lr_bias_array.var(),
+        "ppi_variance": ppi_bias_array.var(),
+        "lr_avg_var": lr_avg_var,
+        "ppi_avg_var": ppi_avg_var,
+    }
+
+    # Create a DataFrame from the dictionary
+    result_df = pd.DataFrame([result_dict])
+
+    # Check if the file exists
+    if os.path.exists(args.result_file):
+        # If the file exists, append without writing the header
+        result_df.to_csv(args.result_file, mode="a", header=False, index=False)
+        console.print(f"[cyan]Results appended to '{args.result_file}'[/cyan]")
+    else:
+        # If the file doesn't exist, create it and write the header
+        result_df.to_csv(args.result_file, index=False)
+        console.print(f"[cyan]Results saved to new file '{args.result_file}'[/cyan]")
 
     console.print(
         Panel.fit(
