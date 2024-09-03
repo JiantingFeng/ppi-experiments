@@ -242,7 +242,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--result_file",
         type=str,
-        default="result.csv",
+        default="data/results/result.csv",
         help="Name of the CSV file to save results",
     )
     args = parser.parse_args()
@@ -374,8 +374,8 @@ if __name__ == "__main__":
     plt.tight_layout()
 
     if args.save_figure:
-        plt.savefig("pseudo_label.png", dpi=300, bbox_inches="tight")
-        console.print("[cyan]Plot saved as 'pseudo_label.png'[/cyan]")
+        plt.savefig("figures/pseudo_label.png", dpi=300, bbox_inches="tight")
+        console.print("[cyan]Plot saved as 'figures/pseudo_label.png'[/cyan]")
     else:
         plt.show()
 
