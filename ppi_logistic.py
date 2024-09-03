@@ -4,17 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.optimize import minimize
 from functools import partial
-
-
-np.random.seed(42)
-
-n_samples = 100000
-n_dims = 10
-n_exps = 100
-labeled_unlabeled_ratio = 0.3
-
-lr_bias_list = []
-ppi_bias_list = []
+import argparse
 
 
 def log1pexp(x):
@@ -122,30 +112,36 @@ def optimize_logistic_regression(X, y, temp: float = 1):
 
 
 def ppi_logistic_loss(X_labeled, y_labeled, X_unlabeled, beta_hat, temp, beta):
-    Y_unlabeled_psedo = np.where(X_unlabeled @ beta_hat > 0.5, 1, 0)
-    Y_labeled_psedo = np.where(X_labeled @ beta_hat > 0.5, 1, 0)
-    # loss_unlabeled = logistic_loss(X_unlabeled, X_unlabeled @ beta_hat, temp, beta)
-    # loss_correction = logistic_loss(X_labeled, y_labeled, temp, beta) - logistic_loss(
-    #     X_labeled, X_labeled @ beta_hat, temp, beta
-    # )
-    loss_unlabeled = logistic_loss(X_unlabeled, Y_unlabeled_psedo, temp, beta)
-    loss_correction = logistic_loss(X_labeled, y_labeled, temp, beta) - logistic_loss(
-        X_labeled, Y_labeled_psedo, temp, beta
-    )
+    if args.pseudo_label:
+        Y_unlabeled_pseudo = np.where(X_unlabeled @ beta_hat > 0.5, 1, 0)
+        Y_labeled_pseudo = np.where(X_labeled @ beta_hat > 0.5, 1, 0)
+        loss_unlabeled = logistic_loss(X_unlabeled, Y_unlabeled_pseudo, temp, beta)
+        loss_correction = logistic_loss(
+            X_labeled, y_labeled, temp, beta
+        ) - logistic_loss(X_labeled, Y_labeled_pseudo, temp, beta)
+    else:
+        loss_unlabeled = logistic_loss(X_unlabeled, X_unlabeled @ beta_hat, temp, beta)
+        loss_correction = logistic_loss(
+            X_labeled, y_labeled, temp, beta
+        ) - logistic_loss(X_labeled, X_labeled @ beta_hat, temp, beta)
     return loss_unlabeled - loss_correction
 
 
 def grad_ppi_logistic_loss(X_labeled, y_labeled, X_unlabeled, beta_hat, temp, beta):
-    Y_unlabeled_psedo = np.where(X_unlabeled @ beta_hat > 0.5, 1, 0)
-    Y_labeled_psedo = np.where(X_labeled @ beta_hat > 0.5, 1, 0)
-    # grad_unlabeled = grad_logistic_loss(X_unlabeled, X_unlabeled @ beta_hat, temp, beta)
-    # grad_correction = grad_logistic_loss(
-    #     X_labeled, y_labeled, temp, beta
-    # ) - grad_logistic_loss(X_labeled, X_labeled @ beta_hat, temp, beta)
-    grad_unlabeled = grad_logistic_loss(X_unlabeled, Y_unlabeled_psedo, temp, beta)
-    grad_correction = grad_logistic_loss(
-        X_labeled, y_labeled, temp, beta
-    ) - grad_logistic_loss(X_labeled, Y_labeled_psedo, temp, beta)
+    if args.pseudo_label:
+        Y_unlabeled_pseudo = np.where(X_unlabeled @ beta_hat > 0.5, 1, 0)
+        Y_labeled_pseudo = np.where(X_labeled @ beta_hat > 0.5, 1, 0)
+        grad_unlabeled = grad_logistic_loss(X_unlabeled, Y_unlabeled_pseudo, temp, beta)
+        grad_correction = grad_logistic_loss(
+            X_labeled, y_labeled, temp, beta
+        ) - grad_logistic_loss(X_labeled, Y_labeled_pseudo, temp, beta)
+    else:
+        grad_unlabeled = grad_logistic_loss(
+            X_unlabeled, X_unlabeled @ beta_hat, temp, beta
+        )
+        grad_correction = grad_logistic_loss(
+            X_labeled, y_labeled, temp, beta
+        ) - grad_logistic_loss(X_labeled, X_labeled @ beta_hat, temp, beta)
     return grad_unlabeled + grad_correction
 
 
@@ -200,55 +196,67 @@ def generate_data(n_samples, n_dims):
     return X, y
 
 
-for i in range(n_exps):
-    print(f"Experiment no. {i}")
-    beta_true = np.asarray([0] * (n_dims // 2) + [1] * (n_dims - n_dims // 2))
-    n_labeled = int(n_samples * labeled_unlabeled_ratio)
-    n_unlabeled = n_samples - int(n_samples * labeled_unlabeled_ratio)
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='PPI Logistic Regression Experiment')
+    parser.add_argument('--n_samples', type=int, default=100000, help='Number of samples')
+    parser.add_argument('--n_dims', type=int, default=10, help='Number of dimensions')
+    parser.add_argument('--n_exps', type=int, default=100, help='Number of experiments')
+    parser.add_argument('--labeled_unlabeled_ratio', type=float, default=0.3, help='Ratio of labeled to unlabeled data')
+    parser.add_argument('--pseudo_label', type=bool, default=True, help='Whether to use pseudo-labels')
+    parser.add_argument('--temp', type=float, default=1.0, help='Temperature parameter')
+    parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
+    args = parser.parse_args()
 
-    X_train_labeled, y_train_labeled = generate_data(n_labeled, n_dims)
-    X_train_unlabeled, _ = generate_data(n_unlabeled, n_dims)
-    X_holdout, y_holdout = generate_data(n_samples * 10, n_dims)
+    np.random.seed(args.seed)
 
-    beta_hat = optimize_logistic_regression(X_holdout, y_holdout)
-    beta_ppi = optimize_ppi_logistic_regression(
-        X_train_labeled, y_train_labeled, X_train_unlabeled
+    lr_bias_list = []
+    ppi_bias_list = []
+
+    for i in range(args.n_exps):
+        print(f"Experiment no. {i}")
+        beta_true = np.asarray([0] * (args.n_dims // 2) + [1] * (args.n_dims - args.n_dims // 2))
+        n_labeled = int(args.n_samples * args.labeled_unlabeled_ratio)
+        n_unlabeled = args.n_samples - int(args.n_samples * args.labeled_unlabeled_ratio)
+
+        X_train_labeled, y_train_labeled = generate_data(n_labeled, args.n_dims)
+        X_train_unlabeled, _ = generate_data(n_unlabeled, args.n_dims)
+        X_holdout, y_holdout = generate_data(args.n_samples * 10, args.n_dims)
+
+        beta_hat = optimize_logistic_regression(X_holdout, y_holdout, args.temp)
+        beta_ppi = optimize_ppi_logistic_regression(
+            X_train_labeled, y_train_labeled, X_train_unlabeled, args.temp
+        )
+
+        lr_bias_list.append(beta_hat - beta_true)
+        ppi_bias_list.append(beta_ppi - beta_true)
+
+    lr_bias_array = np.array(lr_bias_list)
+    ppi_bias_array = np.array(ppi_bias_list)
+
+    # Save as NPY file
+    np.save("lr_bias_array.npy", lr_bias_array)
+    np.save("ppi_bias_array.npy", ppi_bias_array)
+
+    # Combine data for boxplot
+    data = np.concatenate([lr_bias_array, ppi_bias_array], axis=0)
+    labels = ["LR"] * lr_bias_array.shape[0] * args.n_dims + ["PPI"] * ppi_bias_array.shape[0] * args.n_dims
+    dimensions = np.tile(np.arange(1, args.n_dims + 1), lr_bias_array.shape[0] + ppi_bias_array.shape[0])
+
+    # Set up the plot
+    plt.figure(figsize=(15, 8))
+    sns.boxplot(x=dimensions, y=data.flatten(), hue=labels, dodge=True, palette="Set2")
+
+    # Set title and labels
+    plt.title(
+        "Bias Distribution: Logistic Regression vs PPI Logistic Regression",
+        fontsize=16,
+        fontweight="bold",
     )
+    plt.xlabel("Dimensions", fontsize=12)
+    plt.ylabel("Bias", fontsize=12)
+    plt.xticks(rotation=45)
+    plt.grid(axis="y", linestyle="--", alpha=0.7)
 
-    lr_bias_list.append(beta_hat - beta_true)
-    ppi_bias_list.append(beta_ppi - beta_true)
-
-lr_bias_array = np.array(lr_bias_list)
-ppi_bias_array = np.array(ppi_bias_list)
-
-# Save as NPY file
-np.save("lr_bias_array.npy", lr_bias_array)
-np.save("ppi_bias_array.npy", ppi_bias_array)
-
-# Combine data for boxplot
-data = np.concatenate([lr_bias_array, ppi_bias_array], axis=0)
-labels = ["LR"] * lr_bias_array.shape[0] * n_dims + ["PPI"] * ppi_bias_array.shape[
-    0
-] * n_dims
-dimensions = np.tile(
-    np.arange(1, n_dims + 1), lr_bias_array.shape[0] + ppi_bias_array.shape[0]
-)
-
-# Set up the plot
-plt.figure(figsize=(15, 8))
-sns.boxplot(x=dimensions, y=data.flatten(), hue=labels, dodge=True, palette="Set2")
-
-# Set title and labels
-plt.title(
-    "Bias Distribution: Logistic Regression vs PPI Logistic Regression",
-    fontsize=16,
-    fontweight="bold",
-)
-plt.xlabel("Dimensions", fontsize=12)
-plt.ylabel("Bias", fontsize=12)
-plt.xticks(rotation=45)
-plt.grid(axis="y", linestyle="--", alpha=0.7)
-
-# Show the plot
-plt.tight_layout()
-plt.savefig("psedo_label.png", dpi=300)  # Save with higher resolution
+    # Show the plot
+    plt.tight_layout()
+    plt.savefig("psedo_label.png", dpi=300)  # Save with higher resolution
