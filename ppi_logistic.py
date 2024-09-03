@@ -214,10 +214,12 @@ def bootstrap_sample(X, y, n_samples):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PPI Logistic Regression Experiment")
     parser.add_argument(
-        "--n_samples", type=int, default=100000, help="Number of samples"
+        "--n_samples", type=int, default=10000, help="Number of samples"
     )
     parser.add_argument("--n_dims", type=int, default=10, help="Number of dimensions")
-    parser.add_argument("--n_exps", type=int, default=100, help="Number of experiments")
+    parser.add_argument(
+        "--n_exps", type=int, default=1000, help="Number of experiments"
+    )
     parser.add_argument(
         "--labeled_unlabeled_ratio",
         type=float,
@@ -262,7 +264,9 @@ if __name__ == "__main__":
     ppi_bias_list = []
 
     # Generate the full dataset only once
-    X_full, y_full = generate_data(args.n_samples * 2, args.n_dims)  # Generate extra data for holdout
+    X_full, y_full = generate_data(
+        args.n_samples * 2, args.n_dims
+    )  # Generate extra data for holdout
     n_labeled = int(args.n_samples * args.labeled_unlabeled_ratio)
     n_unlabeled = args.n_samples - n_labeled
 
@@ -289,8 +293,12 @@ if __name__ == "__main__":
             )
 
             # Bootstrap sample from the full dataset
-            X_train, y_train = bootstrap_sample(X_full[:args.n_samples], y_full[:args.n_samples], args.n_samples)
-            X_holdout, y_holdout = bootstrap_sample(X_full[args.n_samples:], y_full[args.n_samples:], args.n_samples)
+            X_train, y_train = bootstrap_sample(
+                X_full[: args.n_samples], y_full[: args.n_samples], args.n_samples
+            )
+            X_holdout, y_holdout = bootstrap_sample(
+                X_full[args.n_samples :], y_full[args.n_samples :], args.n_samples
+            )
 
             # Split the training data into labeled and unlabeled sets
             X_train_labeled, y_train_labeled = X_train[:n_labeled], y_train[:n_labeled]
@@ -314,28 +322,25 @@ if __name__ == "__main__":
     lr_bias_array = np.array(lr_bias_list)
     ppi_bias_array = np.array(ppi_bias_list)
 
-    console.print("[bold cyan]Saving results...[/bold cyan]")
-    np.save("lr_bias_array.npy", lr_bias_array)
-    np.save("ppi_bias_array.npy", ppi_bias_array)
-
     console.print("[bold cyan]Generating plot...[/bold cyan]")
     # Combine data for boxplot
     data = np.concatenate([lr_bias_array, ppi_bias_array], axis=0)
     labels = ["LR"] * lr_bias_array.shape[0] * args.n_dims + [
-        "PPI"
+        "LR-PPI"
     ] * ppi_bias_array.shape[0] * args.n_dims
     dimensions = np.tile(
         np.arange(1, args.n_dims + 1), lr_bias_array.shape[0] + ppi_bias_array.shape[0]
     )
 
-    # Set up the plot
+    # Set up the plot with new color scheme
     plt.figure(figsize=(15, 8))
+    sns.set_style("whitegrid")
     sns.boxplot(
         x=dimensions,
         y=data.flatten(),
         hue=labels,
         dodge=True,
-        palette={"LR": "blue", "PPI": "green"},
+        palette={"LR": "lightblue", "LR-PPI": "gray"},
     )
 
     # Set title and labels
@@ -349,9 +354,14 @@ if __name__ == "__main__":
     plt.xticks(rotation=45)
     plt.grid(axis="y", linestyle="--", alpha=0.7)
 
+    # Customize legend
+    plt.legend(title="Method", loc="upper right", frameon=True)
+
     # Show the plot
     plt.tight_layout()
-    plt.savefig("pseudo_label.png", dpi=300)  # Save with higher resolution
+    plt.savefig(
+        "pseudo_label.png", dpi=300, bbox_inches="tight"
+    )  # Save with higher resolution
 
     results_table = Table(
         title="Experiment Results", show_header=True, header_style="bold magenta"
@@ -376,7 +386,6 @@ if __name__ == "__main__":
     console.print(
         Panel.fit(
             "[bold green]Experiment completed successfully![/bold green]\n"
-            "[cyan]Results saved as 'lr_bias_array.npy' and 'ppi_bias_array.npy'[/cyan]\n"
             "[cyan]Plot saved as 'pseudo_label.png'[/cyan]",
             border_style="green",
         )
