@@ -233,6 +233,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--seed", type=int, default=42, help="Random seed for reproducibility"
     )
+    parser.add_argument(
+        "--save_figure",
+        action="store_true",
+        help="Save the figure as 'pseudo_label.png'",
+    )
     args = parser.parse_args()
 
     np.random.seed(args.seed)
@@ -258,6 +263,7 @@ if __name__ == "__main__":
     param_table.add_row("Use pseudo-labels", str(args.pseudo_label))
     param_table.add_row("Temperature", str(args.temp))
     param_table.add_row("Random seed", str(args.seed))
+    param_table.add_row("Save figure", str(args.save_figure))
     console.print(param_table)
 
     lr_bias_list = []
@@ -359,9 +365,12 @@ if __name__ == "__main__":
 
     # Show the plot
     plt.tight_layout()
-    plt.savefig(
-        "pseudo_label.png", dpi=300, bbox_inches="tight"
-    )  # Save with higher resolution
+
+    if args.save_figure:
+        plt.savefig("pseudo_label.png", dpi=300, bbox_inches="tight")
+        console.print("[cyan]Plot saved as 'pseudo_label.png'[/cyan]")
+    else:
+        plt.show()
 
     results_table = Table(
         title="Experiment Results", show_header=True, header_style="bold magenta"
@@ -375,18 +384,25 @@ if __name__ == "__main__":
     results_table.add_row(
         "Std Bias", f"{lr_bias_array.std():.4f}", f"{ppi_bias_array.std():.4f}"
     )
+
     results_table.add_row(
         "Max Bias", f"{lr_bias_array.max():.4f}", f"{ppi_bias_array.max():.4f}"
     )
     results_table.add_row(
         "Min Bias", f"{lr_bias_array.min():.4f}", f"{ppi_bias_array.min():.4f}"
     )
+    results_table.add_row(
+        "Variance", f"{lr_bias_array.var():.4f}", f"{ppi_bias_array.var():.4f}"
+    )
     console.print(results_table)
+
+    # Calculate and report average variance across dimensions
+    lr_avg_var = np.mean(np.var(lr_bias_array, axis=0))
+    ppi_avg_var = np.mean(np.var(ppi_bias_array, axis=0))
 
     console.print(
         Panel.fit(
-            "[bold green]Experiment completed successfully![/bold green]\n"
-            "[cyan]Plot saved as 'pseudo_label.png'[/cyan]",
+            "[bold green]Experiment completed successfully![/bold green]",
             border_style="green",
         )
     )
