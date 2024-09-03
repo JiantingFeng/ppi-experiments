@@ -13,15 +13,17 @@ def plot_variance(result_file):
     # Create the plot
     plt.figure(figsize=(15, 8))
     sns.set_style("whitegrid")
+    sns.set_palette("Set2")  # Changed color palette
 
-    # Plot LR and PPI variances
+    # Plot LR and PPI variances with improved clarity
     sns.lineplot(
         x="labeled_unlabeled_ratio",
         y="lr_variance",
         data=df,
         label="LR Variance",
         marker="o",
-        color="lightblue",
+        linestyle="-",  # Added line style
+        linewidth=2,  # Increased line width
     )
 
     sns.lineplot(
@@ -30,7 +32,8 @@ def plot_variance(result_file):
         data=df,
         label="LR-PPI Variance",
         marker="o",
-        color="gray",
+        linestyle="--",  # Added line style
+        linewidth=2,  # Increased line width
     )
     # Set labels and title
     plt.title(
@@ -41,7 +44,7 @@ def plot_variance(result_file):
     plt.xlabel("Labeled/Unlabeled Ratio", fontsize=12)
     plt.ylabel("Variance", fontsize=12)
     plt.xticks(df["labeled_unlabeled_ratio"], rotation=45)
-    plt.grid(axis="y", linestyle="--", alpha=0.7)
+    plt.grid(axis="both", linestyle="--", alpha=0.7)  # Changed to both axes
 
     # Customize legend
     plt.legend(title="Method", loc="upper right", frameon=True)
