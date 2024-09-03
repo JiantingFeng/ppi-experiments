@@ -206,6 +206,11 @@ def generate_data(n_samples, n_dims):
     return X, y
 
 
+def bootstrap_sample(X, y, n_samples):
+    indices = np.random.choice(len(X), size=n_samples, replace=True)
+    return X[indices], y[indices]
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PPI Logistic Regression Experiment")
     parser.add_argument(
@@ -256,6 +261,11 @@ if __name__ == "__main__":
     lr_bias_list = []
     ppi_bias_list = []
 
+    # Generate the full dataset only once
+    X_full, y_full = generate_data(args.n_samples * 2, args.n_dims)  # Generate extra data for holdout
+    n_labeled = int(args.n_samples * args.labeled_unlabeled_ratio)
+    n_unlabeled = args.n_samples - n_labeled
+
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -277,14 +287,14 @@ if __name__ == "__main__":
             beta_true = np.asarray(
                 [0] * (args.n_dims // 2) + [1] * (args.n_dims - args.n_dims // 2)
             )
-            n_labeled = int(args.n_samples * args.labeled_unlabeled_ratio)
-            n_unlabeled = args.n_samples - int(
-                args.n_samples * args.labeled_unlabeled_ratio
-            )
 
-            X_train_labeled, y_train_labeled = generate_data(n_labeled, args.n_dims)
-            X_train_unlabeled, _ = generate_data(n_unlabeled, args.n_dims)
-            X_holdout, y_holdout = generate_data(args.n_samples * 10, args.n_dims)
+            # Bootstrap sample from the full dataset
+            X_train, y_train = bootstrap_sample(X_full[:args.n_samples], y_full[:args.n_samples], args.n_samples)
+            X_holdout, y_holdout = bootstrap_sample(X_full[args.n_samples:], y_full[args.n_samples:], args.n_samples)
+
+            # Split the training data into labeled and unlabeled sets
+            X_train_labeled, y_train_labeled = X_train[:n_labeled], y_train[:n_labeled]
+            X_train_unlabeled = X_train[n_labeled:]
 
             beta_hat = optimize_logistic_regression(X_holdout, y_holdout, args.temp)
 
