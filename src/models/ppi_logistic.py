@@ -242,7 +242,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--result_file",
         type=str,
-        default="data/results/result.csv",
+        default="results/result.csv",
         help="Name of the CSV file to save results",
     )
     args = parser.parse_args()

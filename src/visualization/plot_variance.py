@@ -23,6 +23,7 @@ def plot_variance(result_file):
         marker="o",
         color="lightblue",
     )
+
     sns.lineplot(
         x="labeled_unlabeled_ratio",
         y="ppi_variance",
@@ -31,7 +32,6 @@ def plot_variance(result_file):
         marker="o",
         color="gray",
     )
-
     # Set labels and title
     plt.title(
         "Variance of LR and PPI Methods vs Labeled/Unlabeled Ratio",
@@ -50,8 +50,8 @@ def plot_variance(result_file):
     plt.tight_layout()
 
     # Save the plot
-    plt.savefig("variance_vs_ratio.png", dpi=300, bbox_inches="tight")
-    print("Variance graph saved as 'variance_vs_ratio.png'")
+    plt.savefig("figures/variance_vs_ratio.png", dpi=300, bbox_inches="tight")
+    print("Variance graph saved as 'figures/variance_vs_ratio.png'")
 
 
 if __name__ == "__main__":
