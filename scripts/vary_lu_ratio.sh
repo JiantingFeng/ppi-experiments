@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Set the base parameters
-N_SAMPLES=1000
+N_SAMPLES=10000
 N_DIMS=10
 N_EXPS=100
 TEMP=1.0
-SEED=2024
+SEED=42
 RESULT_FILE="results/vary_ul_ratio_results.csv"
 
 # Ensure the directory for the result file exists

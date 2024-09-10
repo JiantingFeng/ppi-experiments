@@ -200,9 +200,9 @@ def optimize_ppi_logistic_regression(
 def generate_data(n_samples, n_dims):
     X = np.random.randn(n_samples, n_dims)
     beta_true = np.asarray([0] * (n_dims // 2) + [1] * (n_dims - n_dims // 2))
-
+    noise = np.random.randn(n_samples)
     # Generate target variable
-    y = np.random.binomial(1, 1 / (1 + np.exp(-X.dot(beta_true))))
+    y = np.where(X @ beta_true + noise > 0, 1, 0)
 
     return X, y
 
